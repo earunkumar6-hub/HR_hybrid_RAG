@@ -1,0 +1,28 @@
+# Applies to the build context (project root) for both Dockerfiles.
+.git/
+.gitignore
+README.md
+
+.venv/
+venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.deepeval/
+
+# Local secrets / env — passed in via env_file at run time instead.
+.env
+.env.*
+!*.env.example
+
+# Runtime data — persisted via named/bind volumes, not baked into the image.
+backend/data/documents/*
+!backend/data/documents/.gitkeep
+!backend/data/documents/README.md
+backend/data/chroma/*
+backend/data/graph/*
+backend/data/manifest.json
+!backend/data/**/.gitkeep
+
+# Docker-related files themselves don't need to be in the context twice.
+docker-compose*.yml

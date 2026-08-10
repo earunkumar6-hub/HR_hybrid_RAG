@@ -1,0 +1,109 @@
+# Production stack.
+#
+#   cp .env.example .env         # fill in real OPENAI_API_KEY, tighten
+#                                 # GUARDRAILS_ENABLED, LangSmith keys, etc.
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from docker-compose.yml (dev):
+#   - No source bind-mounts: the image is built once from a snapshot of
+#     the code, not live-edited.
+#   - No --reload; a single uvicorn worker (see backend/Dockerfile for
+#     why more than one worker isn't safe yet with the current in-process
+#     knowledge-graph store / embedded Chroma client).
+#   - restart: always, plus basic CPU/memory limits so one runaway
+#     container can't starve the host.
+#   - The backend port is bound to loopback only (127.0.0.1:8000) instead
+#     of 0.0.0.0 — reachable from the host machine for debugging /docs,
+#     but not from the public internet, since there is no auth layer on
+#     the API yet (see README "Notes / things you'll likely want to
+#     change"). Put it behind your own auth/reverse proxy before removing
+#     that restriction.
+#   - backend/data/documents/ (the folder you drop source files into) is
+#     bind-mounted from the host, so you can add/remove files on the
+#     production host without rebuilding the image; Chroma + the
+#     knowledge graph live in Docker-managed named volumes instead, since
+#     nothing needs to hand-edit those. New/changed files are picked up
+#     on the next backend start, e.g. after dropping files in, run:
+#       docker compose -f docker-compose.prod.yml restart backend
+#     (or call `POST /reindex` directly — see README — to pick them up
+#     without a restart).
+#   - An optional nginx reverse proxy (TLS termination + websocket-aware
+#     proxying for Streamlit) is included behind a Compose profile so it
+#     doesn't start unless you ask for it:
+#       docker compose -f docker-compose.prod.yml --profile with-nginx up -d --build
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: internal-knowledge-assistant-backend:latest
+    container_name: ika-backend
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend/data/documents:/app/data/documents
+      - chroma_data:/app/data/chroma
+      - graph_data:/app/data/graph
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+        reservations:
+          memory: 512m
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: internal-knowledge-assistant-frontend:latest
+    container_name: ika-frontend
+    env_file:
+      - .env
+    environment:
+      BACKEND_BASE_URL: http://backend:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          memory: 256m
+
+  # Optional: TLS termination + websocket-aware reverse proxy in front of
+  # Streamlit. Only starts with `--profile with-nginx`. Put your real
+  # certs in ./deploy/nginx/certs/ (fullchain.pem + privkey.pem) — e.g.
+  # via certbot — and edit deploy/nginx/nginx.conf's server_name first.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ika-nginx
+    profiles: ["with-nginx"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+    restart: always
+
+volumes:
+  chroma_data:
+  graph_data:

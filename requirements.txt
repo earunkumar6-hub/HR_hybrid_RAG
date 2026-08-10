@@ -1,0 +1,49 @@
+# ---- Backend framework ----
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
+python-multipart==0.0.32
+pydantic==2.13.4
+pydantic-settings==2.15.0
+
+# ---- LLM / RAG orchestration ----
+langchain==1.3.14
+langchain-core==1.5.3
+langchain-text-splitters==1.1.2
+langchain-openai==1.4.2
+langchain-community==0.4.2
+langchain-chroma==1.1.0
+openai==2.53.0
+
+# ---- Vector DB ----
+chromadb==1.5.9
+
+# ---- Knowledge Graph RAG ----
+networkx==3.6.1
+pyvis==0.3.2
+
+# ---- Guardrails ----
+nemoguardrails==0.23.0
+
+# ---- LLM Evaluation ----
+deepeval==4.1.6
+
+# ---- Observability / Tracing ----
+langsmith==0.10.17
+
+# ---- Document parsing ----
+pypdf==5.9.0
+python-docx==1.2.0
+unstructured==0.16.11
+
+# ---- Frontend ----
+streamlit==1.61.1
+
+# ---- Utilities ----
+python-dotenv==1.2.2
+tiktoken==0.13.0
+requests==2.33.1
+
+# Tested against Python 3.12. Pins reflect versions validated during build;
+# `pip install -r requirements.txt --upgrade` should generally be safe too,
+# but re-run `deepeval test run backend/eval/test_rag_eval.py` after any
+# major-version bump of langchain / chromadb / nemoguardrails / deepeval.

@@ -1,0 +1,8 @@
+# Frontend-only dependencies (used for the Streamlit/Docker image).
+# The frontend only ever talks to the backend over HTTP, so it does NOT
+# need langchain/chromadb/nemoguardrails/deepeval — keeping this list
+# short makes the frontend image build fast and stay small.
+streamlit==1.61.1
+requests==2.33.1
+pyvis==0.3.2
+python-dotenv==1.2.2

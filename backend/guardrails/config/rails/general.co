@@ -1,0 +1,26 @@
+define user express greeting
+  "hi"
+  "hello"
+  "hey there"
+
+define bot express greeting
+  "Hello! I'm the Internal Knowledge Assistant. Ask me anything about our internal policies, engineering, risk, or governance documentation."
+
+define flow greeting
+  user express greeting
+  bot express greeting
+
+define bot refuse to respond
+  "I can't help with that request. I'm scoped to answering questions from our internal knowledge base (Digital Lending, Enterprise Engineering, Risk Management, and Governance & Strategy documents) only."
+
+define flow self check input
+  $allowed = execute self_check_input
+  if not $allowed
+    bot refuse to respond
+    stop
+
+define flow self check output
+  $allowed = execute self_check_output
+  if not $allowed
+    bot refuse to respond
+    stop

@@ -1,0 +1,62 @@
+# Local development stack.
+#
+#   cp .env.example .env   # fill in OPENAI_API_KEY at minimum
+#   docker compose up --build
+#
+# Backend:  http://localhost:8000/docs
+# Frontend: http://localhost:8501
+#
+# Source directories are bind-mounted so code edits take effect without
+# rebuilding: the backend reloads via uvicorn --reload, and Streamlit
+# auto-reruns on save. Because the whole ./backend folder is bind-mounted
+# (not just the code), backend/data/{documents,chroma,graph} already live
+# on the host under the project folder with no extra volumes needed —
+# drop files straight into backend/data/documents/ and restart the
+# backend (or `docker compose restart backend`) to index them.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: internal-knowledge-assistant-backend:dev
+    container_name: ika-backend
+    env_file:
+      - .env
+    environment:
+      GUARDRAILS_ENABLED: "${GUARDRAILS_ENABLED:-true}"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command:
+      ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: internal-knowledge-assistant-frontend:dev
+    container_name: ika-frontend
+    env_file:
+      - .env
+    environment:
+      # Reach the backend by its Compose service name over the internal
+      # Docker network, not localhost (which would be the frontend
+      # container itself).
+      BACKEND_BASE_URL: http://backend:8000
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+backend/data/chroma/
+backend/data/documents/*
+!backend/data/documents/.gitkeep
+!backend/data/documents/README.md
+backend/data/graph/*.json
+backend/data/manifest.json
+.deepeval/
+.pytest_cache/
+*.log
+.DS_Store
+
+# Docker
+deploy/nginx/certs/*
+!deploy/nginx/certs/.gitkeep
